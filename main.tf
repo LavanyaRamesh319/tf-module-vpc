@@ -21,5 +21,19 @@ module "subnets" {
 
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.main.id
-  tags = merge(var.tags, { Name = "${var.env}-vpc" })
+  tags = merge(var.tags, { Name = "${var.env}-igw" })
+}
+
+resource "aws_eip" "ngw" {
+  count = length(lookup(lookup(var.subnets, "public", null), "cidr_block", 0))
+  vpc = true
+  tags = merge(var.tags, { Name = "${var.env}-ngw" })
+}
+
+resource "aws_nat_gateway" "ngw" {
+  count = length(lookup(lookup(var.subnets, "public", null), "cidr_block", 0))
+  allocation_id = aws_eip.ngw[count.index].id
+  subnet_id     = module.subnets["public"].subnet_ids[count.index]
+
+  tags = merge(var.tags, { Name = "${var.env}-ngw" })
 }
